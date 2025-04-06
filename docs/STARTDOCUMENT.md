@@ -36,4 +36,4 @@ TaskManagerApp is a to-do list application that allows users to manage their tas
 - The app showcases its functionalities and the usage of design patterns to solve problems. Therefore, we do not implement persisten storage... for now.
 - I had fun with the styling.
 - Put some effort into the UX.
-- After a grade, I will extend this app, such as clicking on tasks opens up a dialog where you can set extra informations.
+- After a grade, I will extend this app, such as clicking on tasks opens up a dialog where you can set extra information.
