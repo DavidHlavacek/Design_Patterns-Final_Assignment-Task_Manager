@@ -30,9 +30,7 @@ jobs:
     - name: Create JAR file
       run: |
         echo "Main-Class: Main" > manifest.txt
-        cd bin
-        jar cfm ../TaskManager.jar ../manifest.txt .
-        cd ..
+        jar cfm TaskManager.jar manifest.txt -C bin .
         
     # Add step to verify JAR contents
     - name: Verify JAR contents
