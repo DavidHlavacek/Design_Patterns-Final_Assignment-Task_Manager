@@ -29,7 +29,7 @@ jobs:
       
     - name: Create JAR file
       run: |
-        echo "Main-Class: app.Main" > manifest.txt
+        echo "Main-Class: Main" > manifest.txt
         jar cfm TaskManager.jar manifest.txt -C bin .
         
     - name: Create Release
