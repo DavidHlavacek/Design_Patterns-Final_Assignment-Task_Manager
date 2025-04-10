@@ -1,5 +1,3 @@
-package app;
-
 import javax.swing.SwingUtilities;
 import model.TaskModel;
 import controller.TaskController;
