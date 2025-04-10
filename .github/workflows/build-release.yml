@@ -31,23 +31,10 @@ jobs:
       run: |
         echo "Main-Class: Main" > manifest.txt
         cd build
-        # Add debugging: Check current directory and list files
-        echo "Current directory: $(pwd)"
-        echo "Contents of build directory:"
-        ls -la
-        # Explicitly add all contents of build using shell wildcard expansion
+        # Create JAR from build directory contents
         jar cfm ../TaskManager.jar ../manifest.txt *
         cd ..
         
-    # Add step to verify JAR contents
-    - name: Verify JAR contents
-      run: |
-        echo "--- JAR Contents (root) ---"
-        # List root files; add fallback message if grep finds none
-        jar tf TaskManager.jar | grep -v / | sort || echo "[No root files found by grep]"
-        echo "--- JAR Manifest --- "
-        unzip -p TaskManager.jar META-INF/MANIFEST.MF
-
     - name: Create Release
       id: create_release
       if: startsWith(github.ref, 'refs/tags/')
@@ -56,14 +43,14 @@ jobs:
         files: TaskManager.jar
         name: Task Manager ${{ github.ref_name }}
         body: |
-          # Task Manager Release ${{ github.ref_name }}
+          # Release ${{ github.ref_name }}
           
           A simple task management application.
         
           ## Installation
-          1. Make sure you have Java installed (JRE 8 or higher)
-          2. Download the JAR file
-          3. Double click on the JAR file or run with `java -jar TaskManager.jar`
+          1. Make sure you have Java installed (JRE 8 or higher) ([Download here](https://www.java.com/en/download/)).
+          2. Download the `TaskManager.jar` file attached below.
+          3. Double-click the JAR file to run it, OR open a terminal/command prompt in the location where you downloaded the JAR file and run `java -jar TaskManager.jar`.
           
         draft: false
         prerelease: false 
