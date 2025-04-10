@@ -34,6 +34,14 @@ jobs:
         jar cfm ../TaskManager.jar ../manifest.txt .
         cd ..
         
+    # Add step to verify JAR contents
+    - name: Verify JAR contents
+      run: |
+        echo "--- JAR Contents (root) ---"
+        jar tf TaskManager.jar | grep -v / | sort
+        echo "--- JAR Manifest --- "
+        unzip -p TaskManager.jar META-INF/MANIFEST.MF
+
     - name: Create Release
       id: create_release
       if: startsWith(github.ref, 'refs/tags/')
