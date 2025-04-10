@@ -28,7 +28,7 @@ Java
 ### Diagram
 ![Class Diagram](UMLDiagram.png)
 
-### Functionalities (Using MoSCoW Method)
+### MoSCoW
 - **Must have:**
   - Add new tasks.
   - Mark tasks as completed.
