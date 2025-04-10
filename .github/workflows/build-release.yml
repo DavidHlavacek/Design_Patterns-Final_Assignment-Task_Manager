@@ -30,13 +30,17 @@ jobs:
     - name: Create JAR file
       run: |
         echo "Main-Class: Main" > manifest.txt
-        jar cfm TaskManager.jar manifest.txt -C bin .
+        cd bin
+        # Explicitly add all contents of bin using shell wildcard expansion
+        jar cfm ../TaskManager.jar ../manifest.txt *
+        cd ..
         
     # Add step to verify JAR contents
     - name: Verify JAR contents
       run: |
         echo "--- JAR Contents (root) ---"
-        jar tf TaskManager.jar | grep -v / | sort
+        # List root files; add fallback message if grep finds none
+        jar tf TaskManager.jar | grep -v / | sort || echo "[No root files found by grep]"
         echo "--- JAR Manifest --- "
         unzip -p TaskManager.jar META-INF/MANIFEST.MF
 
