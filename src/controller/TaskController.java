@@ -3,6 +3,10 @@ package controller;
 import model.Task;
 import model.TaskModel;
 import model.TaskFactory;
+import strategy.TaskSortStrategy;
+
+// the controller is the middleman between the model and the view, the view tells the controller to change the model, 
+// but the controller itself doensn't directly interact with the view
 
 public class TaskController {
     private TaskModel model;
@@ -22,15 +26,15 @@ public class TaskController {
         model.deleteTask(task);
     }
     
-    public void markTaskCompleted(Task task) {
-        model.markTaskCompleted(task);
-    }
-    
-    public void markTaskIncomplete(Task task) {
-        model.markTaskIncomplete(task);
+    public void setTaskCompleted(Task task, boolean completed) {
+        model.setTaskCompleted(task, completed);
     }
     
     public void editTask(Task task, String newDescription) {
         model.editTask(task, newDescription);
+    }
+    
+    public void setSortStrategy(TaskSortStrategy strategy) {
+        model.setSortStrategy(strategy);
     }
 }

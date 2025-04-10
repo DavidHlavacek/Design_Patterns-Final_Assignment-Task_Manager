@@ -4,14 +4,22 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import strategy.TaskSortStrategy;
+import strategy.IdSortStrategy;
+
+// the model is the data layer, it is responsible for managing the data and the business logic
+// the model does not know about the view
 
 public class TaskModel {
     private Map<Integer, Task> taskMap; // HashMap for O(1) lookups by ID
     private List<TaskObserver> observers;
+    private TaskSortStrategy sortStrategy;
 
     public TaskModel() {
         taskMap = new HashMap<>();
         observers = new ArrayList<>();
+        // default
+        sortStrategy = new IdSortStrategy();
     }
 
     //everything here pretty self-explanatory
@@ -43,35 +51,29 @@ public class TaskModel {
         }
     }
 
-    public void markTaskCompleted(Task task) {
-        Task storedTask = taskMap.get(task.getId());
-        if (storedTask != null) {
-            storedTask.setCompleted(true);
-            notifyObservers();
-        }
-    }
-    
-    public void markTaskIncomplete(Task task) {
-        Task storedTask = taskMap.get(task.getId());
-        if (storedTask != null) {
-            storedTask.setCompleted(false);
+    public void setTaskCompleted(Task task, boolean completed) {
+        Task retrievedTask = taskMap.get(task.getId());
+        if (retrievedTask != null) {
+            retrievedTask.setCompleted(completed);
             notifyObservers();
         }
     }
     
     public void editTask(Task task, String newDescription) {
-        Task storedTask = taskMap.get(task.getId());
-        if (storedTask != null) {
-            storedTask.setDescription(newDescription);
+        Task retrievedTask = taskMap.get(task.getId());
+        if (retrievedTask != null) {
+            retrievedTask.setDescription(newDescription);
             notifyObservers();
         }
     }
 
     public List<Task> getTasks() {
-        return new ArrayList<>(taskMap.values());
+        List<Task> tasks = new ArrayList<>(taskMap.values());
+        return sortStrategy.sort(tasks);
     }
 
-    public Task getTaskById(int id) {
-        return taskMap.get(id);
+    public void setSortStrategy(TaskSortStrategy strategy) {
+        this.sortStrategy = strategy;
+        notifyObservers();
     }
 }

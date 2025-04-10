@@ -10,6 +10,13 @@ import model.Task;
 import model.TaskObserver;
 import model.TaskModel;
 import controller.TaskController;
+import strategy.TaskSortStrategy;
+import strategy.IdSortStrategy;
+import strategy.AlphabeticalSortStrategy;
+import strategy.StatusSortStrategy;
+
+// the view is the frontend, it only reads data from the model and displays it
+// it changes the model through the controller, if there is input from the user (adding tasks, changing sort strategy, etc.)
 
 public class TaskView extends JFrame implements TaskObserver {
     private static final Color BG_COLOR = new Color(245, 245, 250),
@@ -21,11 +28,18 @@ public class TaskView extends JFrame implements TaskObserver {
     
     private TaskModel model;
     private TaskController controller;
+    
     private JPanel tasksPanel;
-    private JTextArea taskField;
-    private JCheckBox showCompletedCheckbox;
-    private JLabel counterLabel;
+    
+    private JTextArea taskDescriptionField;
     private JButton addButton;
+    
+    private JCheckBox showCompletedCheckbox;
+    private JComboBox<String> sortSelector;
+    private JLabel counterLabel;
+    
+    private TaskSortStrategy[] sortStrategies;
+    private JScrollPane contentScrollPane;
 
     public TaskView(TaskModel model, TaskController controller) {
         this.model = model;
@@ -33,6 +47,13 @@ public class TaskView extends JFrame implements TaskObserver {
         model.addObserver(this);
         try {UIManager.setLookAndFeel(UIManager.getCrossPlatformLookAndFeelClassName());} 
         catch (Exception e) {e.printStackTrace();}
+        
+        // init sort strategies
+        sortStrategies = new TaskSortStrategy[] {
+            new IdSortStrategy(),
+            new StatusSortStrategy(),
+            new AlphabeticalSortStrategy()
+        };
         
         setTitle("Task Manager App");
         setSize(600, 800);
@@ -49,31 +70,36 @@ public class TaskView extends JFrame implements TaskObserver {
         return c;
     }
     
+    // util for creating fonts
+    private Font createFont(int style, int size) {
+        return new Font("Arial", style, size);
+    }
+    
+    // util for shared button styling
+    private void setupButton(JButton button, Font font, Color fgColor) {
+        button.setFont(font);
+        button.setContentAreaFilled(false);
+        button.setBorderPainted(false);
+        button.setFocusPainted(false);
+        button.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        button.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10)); 
+        button.setForeground(fgColor);
+    }
+    
     private void initComponents() {
-        // header
-        JPanel headerPanel = ui(new JPanel(new FlowLayout(FlowLayout.LEFT)), HEADER_COLOR, p -> 
-            p.add(ui(new JLabel("Task Manager"), null, c -> {
-                c.setFont(new Font("Arial", Font.BOLD, 18));
-                c.setForeground(Color.WHITE);
-                c.setBorder(new EmptyBorder(10, 10, 10, 0));
-            })));
+        // 1. init components
+        // --------------------------------------
         
-        // task panel
-        tasksPanel = ui(new JPanel(), Color.WHITE, p -> 
-            p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS)));
-        
-        JScrollPane scrollPane = ui(new JScrollPane(
-            ui(new JPanel(new BorderLayout()), Color.WHITE, p -> p.add(tasksPanel, BorderLayout.NORTH))
-        ), null, c -> {
-            c.setBorder(null);
-            c.getViewport().setBackground(Color.WHITE);
-            c.getVerticalScrollBar().setUnitIncrement(16);
-            c.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        // header components
+        JLabel titleLabel = ui(new JLabel("Task Manager"), null, c -> {
+            c.setFont(createFont(Font.BOLD, 18));
+            c.setForeground(Color.WHITE);
+            c.setBorder(new EmptyBorder(10, 10, 10, 0));
         });
         
-        // input
-        taskField = ui(new JTextArea(3, 30), null, c -> {
-            c.setFont(new Font("Arial", Font.PLAIN, 14));
+        // input components
+        taskDescriptionField = ui(new JTextArea(3, 30), null, c -> {
+            c.setFont(createFont(Font.PLAIN, 14));
             c.setLineWrap(true);
             c.setWrapStyleWord(true);
             c.setBorder(BorderFactory.createCompoundBorder(
@@ -83,100 +109,170 @@ public class TaskView extends JFrame implements TaskObserver {
                 @Override public void keyPressed(KeyEvent e) {
                     if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                         e.consume();
-                        if (e.isShiftDown()) taskField.append("\n"); 
+                        if (e.isShiftDown()) taskDescriptionField.append("\n"); 
                         else addButton.doClick();
                     }
                 }
             });
         });
 
-        // add task button
         addButton = ui(new JButton("Add Task"), null, c -> {
-            c.setFont(new Font("Arial", Font.BOLD, 14));
+            setupButton(c, createFont(Font.BOLD, 14), Color.WHITE);
             c.setBackground(HEADER_COLOR);
-            c.setForeground(Color.WHITE);
-            c.setFocusPainted(false);
-            c.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15));
+            c.setContentAreaFilled(true);
+            c.setBorder(BorderFactory.createEmptyBorder(5, 15, 5, 15)); //overwrite
             c.addActionListener(e -> {
-                String description = taskField.getText().trim();
+                String description = taskDescriptionField.getText().trim();
                 if (!description.isEmpty()) {
                     controller.addTask(description);
-                    taskField.setText("");
+                    taskDescriptionField.setText("");
+                    // scroll to bottom after adding new task
+                    SwingUtilities.invokeLater(() -> {
+                        SwingUtilities.invokeLater(() -> {
+                            JScrollBar verticalScrollBar = contentScrollPane.getVerticalScrollBar();
+                            verticalScrollBar.setValue(verticalScrollBar.getMaximum());
+                        });
+                    });
                 }
             });
         });
         
-        // add task input
+        // task components
+        tasksPanel = ui(new JPanel(), Color.WHITE, p -> 
+            p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS)));
+
+        // footer components
+        showCompletedCheckbox = ui(new JCheckBox("Show Completed Tasks", true), null, c -> {
+            c.setFont(createFont(Font.PLAIN, 12));
+            c.setBackground(BG_COLOR);
+            c.addActionListener(e -> update());
+        });
+
+        counterLabel = ui(new JLabel("0 pending · 0 completed"), null, c -> {
+            c.setFont(createFont(Font.PLAIN, 11));
+            c.setForeground(new Color(150, 150, 150));
+        });
+        
+        // init sort options
+        String[] sortOptions = new String[sortStrategies.length];
+        for (int i = 0; i < sortStrategies.length; i++) {
+            sortOptions[i] = sortStrategies[i].getName();
+        }
+        
+        sortSelector = ui(new JComboBox<>(sortOptions), null, c -> {
+            c.setFont(createFont(Font.PLAIN, 12));
+            c.addActionListener(e -> {
+                int selectedIndex = sortSelector.getSelectedIndex();
+                if (selectedIndex >= 0 && selectedIndex < sortStrategies.length) {
+                    model.setSortStrategy(sortStrategies[selectedIndex]);
+                }
+            });
+        });
+
+        // 2. assemble panels
+        // --------------------------------------
+
+        // header panel
+        JPanel headerPanel = ui(new JPanel(new FlowLayout(FlowLayout.LEFT)), HEADER_COLOR, p -> 
+            p.add(titleLabel));
+        
+        // input panel
         JPanel inputPanel = ui(new JPanel(new BorderLayout(5, 0)), BG_COLOR, p -> {
-            p.add(ui(new JScrollPane(taskField, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, 
+            p.add(ui(new JScrollPane(taskDescriptionField, JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED, 
                     JScrollPane.HORIZONTAL_SCROLLBAR_NEVER), null, 
                 c -> c.setBorder(BorderFactory.createLineBorder(new Color(200, 200, 200)))), 
                 BorderLayout.CENTER);
             p.add(addButton, BorderLayout.EAST);
+            p.setBorder(new EmptyBorder(0, 0, 10, 0)); // Add padding below input
         });
         
-        // footer
-        showCompletedCheckbox = ui(new JCheckBox("Show Completed Tasks", true), null, c -> {
-            c.setFont(new Font("Arial", Font.PLAIN, 12));
-            c.setBackground(BG_COLOR);
-            c.addActionListener(e -> update());
+        // task panel
+        contentScrollPane = ui(new JScrollPane(
+            ui(new JPanel(new BorderLayout()), Color.WHITE, p -> p.add(tasksPanel, BorderLayout.NORTH))
+        ), null, c -> {
+            c.setBorder(null);
+            c.getViewport().setBackground(Color.WHITE);
+            c.getVerticalScrollBar().setUnitIncrement(16);
+            c.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+        });
+
+        // main center panel (input panel + task panel)
+        JPanel centerPanel = ui(new JPanel(new BorderLayout(0, 0)), BG_COLOR, p -> {
+            p.setBorder(new EmptyBorder(10, 10, 0, 10)); // Remove bottom padding
+            p.add(inputPanel, BorderLayout.NORTH);
+            p.add(contentScrollPane, BorderLayout.CENTER);
+        });
+
+        // footer panel
+        JPanel sortPanel = ui(new JPanel(new BorderLayout(5, 0)), BG_COLOR, p -> {
+            p.add(new JLabel("Sort: "), BorderLayout.WEST);
+            p.add(sortSelector, BorderLayout.CENTER);
         });
         
-        counterLabel = ui(new JLabel(""), null, c -> {
-            c.setFont(new Font("Arial", Font.PLAIN, 11));
-            c.setForeground(new Color(150, 150, 150));
+        JPanel leftFooterPanel = ui(new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0)), BG_COLOR, lp -> {
+            lp.add(showCompletedCheckbox);
+            lp.add(Box.createHorizontalStrut(50)); // Spacing
+            lp.add(sortPanel);
         });
         
-        // main layout
-        setLayout(new BorderLayout(10, 10));
+        JPanel footerPanel = ui(new JPanel(new BorderLayout(5, 0)), BG_COLOR, bp -> {
+            bp.add(leftFooterPanel, BorderLayout.WEST);
+            bp.add(counterLabel, BorderLayout.EAST);
+            bp.setBorder(new EmptyBorder(10, 10, 10, 10));
+        });
+
+        // 3. assemble main layout
+        // --------------------------------------       
+
+        // add main panels 
+        setLayout(new BorderLayout());
         getContentPane().setBackground(BG_COLOR);
         add(headerPanel, BorderLayout.NORTH);
-        add(ui(new JPanel(new BorderLayout(0, 10)), BG_COLOR, p -> {
-            p.setBorder(new EmptyBorder(10, 10, 10, 10));
-            p.add(inputPanel, BorderLayout.NORTH);
-            p.add(scrollPane, BorderLayout.CENTER);
-            p.add(ui(new JPanel(new BorderLayout(5, 0)), BG_COLOR, bp -> {
-                bp.add(showCompletedCheckbox, BorderLayout.WEST);
-                bp.add(counterLabel, BorderLayout.EAST);
-            }), BorderLayout.SOUTH);
-        }), BorderLayout.CENTER);
+        add(centerPanel, BorderLayout.CENTER);
+        add(footerPanel, BorderLayout.SOUTH);
     }
     
     @Override
     public void update() {
-        // retrives the scroll position to set it after update (since after each update the scroll position was reset)
-        JScrollPane scrollPane = (JScrollPane)SwingUtilities.getAncestorOfClass(JScrollPane.class, tasksPanel);
-        final int scrollPosition = scrollPane != null ? scrollPane.getVerticalScrollBar().getValue() : 0;
-        
+        // get tasks from model
         List<Task> tasks = model.getTasks();
         final int[] counts = new int[2]; // [completed, pending]
         boolean showCompleted = showCompletedCheckbox.isSelected();
         
-        JPanel newTasksPanel = ui(new JPanel(), Color.WHITE, p -> 
-            p.setLayout(new BoxLayout(p, BoxLayout.Y_AXIS)));
-        
-        for (Task task : tasks) {
-            counts[task.isCompleted() ? 0 : 1]++;
-            if (task.isCompleted() && !showCompleted) continue;
-            newTasksPanel.add(createTaskEntry(task));
-            newTasksPanel.add(Box.createRigidArea(new Dimension(0, 1)));
-        }
-        
-        // async
+        // UI updates
         SwingUtilities.invokeLater(() -> {
+            // save scroll position
+            JScrollBar verticalScrollBar = contentScrollPane.getVerticalScrollBar();
+            int scrollPosition = verticalScrollBar.getValue();
+
+            // clear existing tasks
             tasksPanel.removeAll();
-            for (Component c : newTasksPanel.getComponents()) tasksPanel.add(c);
+            
+            // add tasks
+            for (Task task : tasks) {
+                counts[task.isCompleted() ? 0 : 1]++;
+                if (task.isCompleted() && !showCompleted) continue;
+                
+                tasksPanel.add(createTaskEntry(task));
+                tasksPanel.add(Box.createRigidArea(new Dimension(0, 1)));
+            }
+            
+            // update counter and refresh UI
             counterLabel.setText(counts[1] + " pending · " + counts[0] + " completed");
             tasksPanel.revalidate();
             tasksPanel.repaint();
-            if (scrollPane != null) scrollPane.getVerticalScrollBar().setValue(scrollPosition);
+
+            // restore scroll position
+            SwingUtilities.invokeLater(() -> verticalScrollBar.setValue(scrollPosition));
         });
     }
     
+    // create a task entry
     private JPanel createTaskEntry(Task task) {
         boolean completed = task.isCompleted();
         Color bg = completed ? COMPLETED_TASK_BG : ACTIVE_TASK_BG;
         
+        // create a task entry panel
         JPanel entry = ui(new JPanel(new BorderLayout()), bg, p -> {
             p.setBorder(BorderFactory.createCompoundBorder(
                 BorderFactory.createMatteBorder(0, 0, 1, 0, new Color(230, 230, 230)),
@@ -188,72 +284,57 @@ public class TaskView extends JFrame implements TaskObserver {
                 c.setSelected(completed);
                 c.setMargin(new Insets(0, 5, 0, 12));
                 c.setVerticalAlignment(SwingConstants.CENTER);
-                c.addActionListener(e -> {
-                    if (c.isSelected()) controller.markTaskCompleted(task);
-                    else controller.markTaskIncomplete(task);
-                });
+                c.addActionListener(e -> controller.setTaskCompleted(task, c.isSelected()));
             }), BorderLayout.WEST);
             
-            // add task desciption
-            GridBagConstraints gbc = new GridBagConstraints();
-            gbc.fill = GridBagConstraints.HORIZONTAL;
-            gbc.weightx = gbc.weighty = 1.0;
-            p.add(ui(new JPanel(new GridBagLayout()), bg, w -> 
-                w.add(ui(new JTextArea(task.getDescription()), bg, d -> {
+            // task description
+            p.add(ui(new JPanel(new GridBagLayout()), bg, dw -> { // Create wrapper panel
+                GridBagConstraints gbc = new GridBagConstraints();
+                gbc.fill = GridBagConstraints.HORIZONTAL; 
+                gbc.weightx = 1.0; 
+                dw.add(ui(new JTextArea(task.getDescription()), bg, d -> {
                     d.setWrapStyleWord(true);
                     d.setLineWrap(true);
                     d.setEditable(false);
                     d.setFocusable(false);
                     d.setMargin(new Insets(5, 5, 5, 5));
-                    d.setFont(new Font("Arial", Font.PLAIN, 14));
+                    d.setFont(createFont(Font.PLAIN, 14));
                     d.setForeground(completed ? Color.GRAY : Color.BLACK);
                     d.setBorder(null);
-                }), gbc)), BorderLayout.CENTER);
+                }), gbc); // Add the configured JTextArea using the GBC
+            }), BorderLayout.CENTER);
             
             // add edit and delete links/buttons
-            p.add(ui(new JPanel(new BorderLayout()), bg, btnPanel -> {
-                btnPanel.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 0));
-                JPanel links = ui(new JPanel(), bg, l -> {
-                    l.setLayout(new BoxLayout(l, BoxLayout.X_AXIS));
-                    l.setAlignmentY(Component.CENTER_ALIGNMENT);
-                    l.setBorder(BorderFactory.createEmptyBorder(0, 0, 0, 10));
-                    
-                    Consumer<JButton> setupButton = b -> {
-                        b.setFont(new Font("Arial", Font.BOLD, 14));
-                        b.setContentAreaFilled(false);
-                        b.setBorderPainted(false);
-                        b.setFocusPainted(false);
-                        b.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-                        b.setBorder(BorderFactory.createEmptyBorder(5, 10, 5, 10));
-                    };
-                    
-                    // edit dialog
-                    JButton editBtn = ui(new JButton("Edit"), null, b -> {
-                        setupButton.accept(b);
-                        b.setForeground(EDIT_COLOR);
-                        b.addActionListener(e -> {
-                            JTextArea textArea = new JTextArea(task.getDescription(), 5, 30);
-                            textArea.setLineWrap(true);
-                            textArea.setWrapStyleWord(true);
-                            if (JOptionPane.showConfirmDialog(this, new JScrollPane(textArea), 
-                                "Edit Task", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
-                                String newText = textArea.getText().trim();
-                                if (!newText.isEmpty()) controller.editTask(task, newText);
-                            }
-                        });
+            p.add(ui(new JPanel(), bg, l -> {
+                l.setLayout(new BoxLayout(l, BoxLayout.X_AXIS));
+                l.setAlignmentY(Component.CENTER_ALIGNMENT);
+                l.setBorder(BorderFactory.createEmptyBorder(4, 0, 0, 10));
+                
+                // edit dialog 
+                JButton editBtn = ui(new JButton("Edit"), null, b -> {
+                    setupButton(b, createFont(Font.BOLD, 14), EDIT_COLOR);
+                    b.addActionListener(e -> {
+                        JTextArea textArea = new JTextArea(task.getDescription(), 5, 30);
+                        textArea.setLineWrap(true);
+                        textArea.setWrapStyleWord(true);
+                        if (JOptionPane.showConfirmDialog(this, new JScrollPane(textArea), 
+                            "Edit Task", JOptionPane.OK_CANCEL_OPTION, JOptionPane.PLAIN_MESSAGE) == JOptionPane.OK_OPTION) {
+                            String newText = textArea.getText().trim();
+                            if (!newText.isEmpty()) controller.editTask(task, newText);
+                        }
                     });
-                    
-                    JButton delBtn = ui(new JButton("Delete"), null, b -> {
-                        setupButton.accept(b);
-                        b.setForeground(DELETE_COLOR);
-                        b.addActionListener(e -> controller.deleteTask(task));
-                    });
-                    
-                    l.add(editBtn);
-                    l.add(Box.createHorizontalStrut(20));
-                    l.add(delBtn);
                 });
-                btnPanel.add(links, BorderLayout.CENTER);
+                
+                // delete button 
+                JButton delBtn = ui(new JButton("Delete"), null, b -> {
+                    setupButton(b, createFont(Font.BOLD, 14), DELETE_COLOR);
+                    b.addActionListener(e -> controller.deleteTask(task));
+                });
+                
+                // add buttons to layout
+                l.add(editBtn);
+                l.add(Box.createHorizontalStrut(20));
+                l.add(delBtn);
             }), BorderLayout.EAST);
         });
         
