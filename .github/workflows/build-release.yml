@@ -25,7 +25,11 @@ jobs:
       run: mkdir -p bin
       
     - name: Compile Java classes
-      run: javac -d bin src/**/*.java
+      run: |
+        # Compile Main.java specifically first
+        javac -d bin src/Main.java
+        # Compile the rest of the java files in subdirectories
+        javac -d bin -cp bin src/controller/*.java src/model/*.java src/strategy/*.java src/view/*.java
       
     - name: Create JAR file
       run: |
