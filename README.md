@@ -1,4 +1,4 @@
-This is the GitHub Repo for the Final Assignment of Design Patterns, the Task Manager app.
+This is the GitHub Repo for the Final Assignment of Design Patterns, The Task Manager App.
 
 The STARTDOCUMENT can be found [here](docs/STARTDOCUMENT.md).
 
