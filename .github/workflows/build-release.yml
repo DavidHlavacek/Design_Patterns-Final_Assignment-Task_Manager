@@ -3,12 +3,11 @@ name: Build and Release JAR
 on:
   push:
     tags:
-      - 'v*' # Only trigger on version tags
+      - 'v*' 
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    # Add permissions for the GITHUB_TOKEN to create releases
     permissions:
       contents: write
     
@@ -43,7 +42,7 @@ jobs:
         body: |
           # Task Manager Release ${{ github.ref_name }}
           
-          A simple task management application with MVC, Factory, and Observer patterns.
+          A simple task management application.
         
           ## Installation
           1. Make sure you have Java installed (JRE 8 or higher)
