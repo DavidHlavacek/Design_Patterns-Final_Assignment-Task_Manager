@@ -211,7 +211,7 @@ public class TaskView extends JFrame implements TaskObserver {
         
         JPanel leftFooterPanel = ui(new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0)), BG_COLOR, lp -> {
             lp.add(showCompletedCheckbox);
-            lp.add(Box.createHorizontalStrut(50)); // Spacing
+            lp.add(Box.createHorizontalStrut(50)); 
             lp.add(sortPanel);
         });
         
@@ -288,7 +288,7 @@ public class TaskView extends JFrame implements TaskObserver {
             }), BorderLayout.WEST);
             
             // task description
-            p.add(ui(new JPanel(new GridBagLayout()), bg, dw -> { // Create wrapper panel
+            p.add(ui(new JPanel(new GridBagLayout()), bg, dw -> { 
                 GridBagConstraints gbc = new GridBagConstraints();
                 gbc.fill = GridBagConstraints.HORIZONTAL; 
                 gbc.weightx = 1.0; 
@@ -301,7 +301,7 @@ public class TaskView extends JFrame implements TaskObserver {
                     d.setFont(createFont(Font.PLAIN, 14));
                     d.setForeground(completed ? Color.GRAY : Color.BLACK);
                     d.setBorder(null);
-                }), gbc); // Add the configured JTextArea using the GBC
+                }), gbc); // 
             }), BorderLayout.CENTER);
             
             // add edit and delete links/buttons
