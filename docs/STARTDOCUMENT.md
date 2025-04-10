@@ -16,7 +16,7 @@ Java
 
 2. **Observer Pattern** - Updates the UI automatically when data changes
    - **Purpose**: Establishes a one-to-many dependency between objects so that when one object changes state, all its dependents are notified
-   - **Problem Solved**: Allows the model (TaskModel) to notify the view (TaskView) of changes without being directly aware of it. The model doesn't need to know which views are observing it, enabling loose coupling between components and making the application more maintainable.
+   - **Problem Solved**: Allows the model to notify the view of changes without being directly aware of it. The model doesn't need to know which views are observing it, enabling loose coupling between components and making the application more maintainable.
 
 3. **Strategy Pattern** - Enables different sorting algorithms to be selected at runtime
    - **Purpose**: Defines a family of algorithms, encapsulates each one, and makes them interchangeable

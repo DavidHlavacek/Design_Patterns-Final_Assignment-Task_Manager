@@ -2,10 +2,8 @@ name: Build and Release JAR
 
 on:
   push:
-    branches: [ main ]
     tags:
-      - 'v*'
-  workflow_dispatch:
+      - 'v*' # Only trigger on version tags
 
 jobs:
   build:
@@ -13,10 +11,10 @@ jobs:
     
     steps:
     - name: Checkout code
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       
     - name: Set up JDK 17
-      uses: actions/setup-java@v3
+      uses: actions/setup-java@v4
       with:
         java-version: '17'
         distribution: 'temurin'
@@ -32,9 +30,6 @@ jobs:
         echo "Main-Class: app.Main" > manifest.txt
         jar cfm TaskManager.jar manifest.txt -C bin .
         
-    - name: Test JAR
-      run: java -jar TaskManager.jar --version || true
-      
     - name: Create Release
       id: create_release
       if: startsWith(github.ref, 'refs/tags/')
@@ -53,10 +48,4 @@ jobs:
           3. Double click on the JAR file or run with `java -jar TaskManager.jar`
           
         draft: false
-        prerelease: false
-      
-    - name: Upload JAR as artifact
-      uses: actions/upload-artifact@v3
-      with:
-        name: TaskManager
-        path: TaskManager.jar 
+        prerelease: false 
