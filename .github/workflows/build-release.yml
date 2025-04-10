@@ -31,6 +31,10 @@ jobs:
       run: |
         echo "Main-Class: Main" > manifest.txt
         cd bin
+        # Add debugging: Check current directory and list files
+        echo "Current directory: $(pwd)"
+        echo "Contents of bin directory:"
+        ls -la
         # Explicitly add all contents of bin using shell wildcard expansion
         jar cfm ../TaskManager.jar ../manifest.txt *
         cd ..
